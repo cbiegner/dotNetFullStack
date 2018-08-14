@@ -112,6 +112,12 @@
   <ItemGroup>
     <Folder Include="App_Data\" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DotNetDev.Model.PCache\DotNetDev.Model.PCache.csproj">
+      <Project>{14b99845-3aaa-4e12-81fc-0bb908df9c98}</Project>
+      <Name>DotNetDev.Model.PCache</Name>
+    </ProjectReference>
+  </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
