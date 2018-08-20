@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.Caching;
 using System.Web.Http;
 using Swashbuckle.Swagger.Annotations;
 
@@ -12,18 +13,37 @@ namespace DotNetDev.Service.PCache.Controllers
 
 	public class ValuesController : ApiController
 	{
-		// GET api/values
+		[HttpGet]
 		[SwaggerOperation("GetAll")]
-		public IEnumerable<string> Get()
+		[SwaggerResponse(HttpStatusCode.OK, "OK", typeof(List<Strategiedepot>))]
+		[SwaggerResponse(HttpStatusCode.NotFound, "No data", typeof(bool))]
+		[SwaggerResponse(HttpStatusCode.InternalServerError, "An error occured", typeof(Exception))]
+		public HttpResponseMessage Get()
 		{
-			return new string[] { "value1", "value2" };
+			try
+			{
+				var result = GetAllObjectsOfTypeFromCache<Person>();
+
+				if (result != null)
+				{
+					return Request.CreateResponse(HttpStatusCode.OK, result);
+				}
+				else
+				{
+					return Request.CreateResponse(HttpStatusCode.NotFound, true);
+				}
+			}
+			catch (Exception ex)
+			{
+				return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, ex);
+			}
 		}
 
 		// GET api/values/5
 		[SwaggerOperation("GetById")]
 		[SwaggerResponse(HttpStatusCode.OK)]
 		[SwaggerResponse(HttpStatusCode.NotFound)]
-		public string Get(int id)
+		public Person Get(int id)
 		{
 			return "value";
 		}
@@ -50,5 +70,50 @@ namespace DotNetDev.Service.PCache.Controllers
 		public void Delete(int id)
 		{
 		}
+
+		#region Private Methods
+		//private IEnumerable<Person> GetAllPersonFromCache()
+		//{
+		//	ObjectCache cache = MemoryCache.Default;
+		//	var result = cache.OfType<Person>();
+
+		//	return result;
+		//}
+		private IEnumerable<T> GetAllObjectsOfTypeFromCache<T>()
+		{
+			ObjectCache cache = MemoryCache.Default;
+			var result = cache.OfType<T>();
+
+			return result;
+		}
+
+		/// <summary>
+		/// Get stored object from cache
+		/// </summary>
+		/// <param name="id">Unique ID</param>
+		/// <returns>Stored object (of any type)</returns>
+		private T GetFromCache<T>(Guid id)
+		{
+			ObjectCache cache = MemoryCache.Default;
+			var item = (T)cache[id.ToString()];
+
+			return item;
+		}
+
+		/// <summary>
+		/// Save object to cache
+		/// </summary>
+		/// <param name="data">object to store</param>
+		/// <returns>Unique ID</returns>
+		private static Guid SetToCache(object data)
+		{
+			var newGuid = Guid.NewGuid();
+
+			ObjectCache cache = MemoryCache.Default;
+			cache.Add(newGuid.ToString(), data, DateTime.Now.AddDays(1));
+
+			return newGuid;
+		}
+		#endregion
 	}
 }
