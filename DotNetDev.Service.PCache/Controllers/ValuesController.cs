@@ -5,6 +5,8 @@ using System.Net;
 using System.Net.Http;
 using System.Runtime.Caching;
 using System.Web.Http;
+using System.Web.Http.Description;
+
 using Swashbuckle.Swagger.Annotations;
 
 namespace DotNetDev.Service.PCache.Controllers
@@ -14,15 +16,16 @@ namespace DotNetDev.Service.PCache.Controllers
 	public class ValuesController : ApiController
 	{
 		[HttpGet]
+		[ResponseType(typeof(List<Person>))]
 		[SwaggerOperation("GetAll")]
-		[SwaggerResponse(HttpStatusCode.OK, "OK", typeof(List<Strategiedepot>))]
+		[SwaggerResponse(HttpStatusCode.OK, "OK", typeof(List<Person>))]
 		[SwaggerResponse(HttpStatusCode.NotFound, "No data", typeof(bool))]
 		[SwaggerResponse(HttpStatusCode.InternalServerError, "An error occured", typeof(Exception))]
 		public HttpResponseMessage Get()
 		{
 			try
 			{
-				var result = GetAllObjectsOfTypeFromCache<Person>();
+				var result = GetAllFromCache();
 
 				if (result != null)
 				{
@@ -39,36 +42,104 @@ namespace DotNetDev.Service.PCache.Controllers
 			}
 		}
 
-		// GET api/values/5
+		[HttpGet]
+		[ResponseType(typeof(Person))]
 		[SwaggerOperation("GetById")]
 		[SwaggerResponse(HttpStatusCode.OK)]
 		[SwaggerResponse(HttpStatusCode.NotFound)]
-		public Person Get(int id)
+		[SwaggerResponse(HttpStatusCode.InternalServerError, "An error occured", typeof(Exception))]
+		public HttpResponseMessage Get(long id)
 		{
-			return "value";
+			try
+			{
+				var result = GetFromCache(id);
+
+				if (result != null)
+				{
+					return Request.CreateResponse(HttpStatusCode.OK, result);
+				}
+				else
+				{
+					return Request.CreateResponse(HttpStatusCode.NotFound, true);
+				}
+			}
+			catch (Exception ex)
+			{
+				return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, ex);
+			}
 		}
 
-		// POST api/values
+		[HttpPost]
+		[ResponseType(typeof(Guid))]
 		[SwaggerOperation("Create")]
 		[SwaggerResponse(HttpStatusCode.Created)]
-		public void Post([FromBody]string value)
+		[SwaggerResponse(HttpStatusCode.NotFound)]
+		[SwaggerResponse(HttpStatusCode.InternalServerError, "An error occured", typeof(Exception))]
+		public HttpResponseMessage Post(Person data)
 		{
+			try
+			{
+				var result = SetToCache(data);
+
+				if (result != null)
+				{
+					return Request.CreateResponse(HttpStatusCode.Created, result);
+				}
+				else
+				{
+					return Request.CreateResponse(HttpStatusCode.NotFound, true);
+				}
+			}
+			catch (Exception ex)
+			{
+				return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, ex);
+			}
 		}
 
-		// PUT api/values/5
 		[SwaggerOperation("Update")]
 		[SwaggerResponse(HttpStatusCode.OK)]
 		[SwaggerResponse(HttpStatusCode.NotFound)]
-		public void Put(int id, [FromBody]string value)
+		[SwaggerResponse(HttpStatusCode.InternalServerError, "An error occured", typeof(Exception))]
+		public HttpResponseMessage Put(long id, Person data)
 		{
+			try
+			{
+				if(UpdateCache(data))
+				{
+					return Request.CreateResponse(HttpStatusCode.OK, data);
+				}
+				else
+				{
+					return Request.CreateResponse(HttpStatusCode.NotFound, true);
+				}
+			}
+			catch (Exception ex)
+			{
+				return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, ex);
+			}
 		}
 
-		// DELETE api/values/5
 		[SwaggerOperation("Delete")]
 		[SwaggerResponse(HttpStatusCode.OK)]
 		[SwaggerResponse(HttpStatusCode.NotFound)]
-		public void Delete(int id)
+		[SwaggerResponse(HttpStatusCode.InternalServerError, "An error occured", typeof(Exception))]
+		public HttpResponseMessage Delete(long id)
 		{
+			try
+			{
+				if(DeleteFromCache(id))
+				{
+					return Request.CreateResponse(HttpStatusCode.OK, id);
+				}
+				else
+				{
+					return Request.CreateResponse(HttpStatusCode.NotFound, true);
+				}
+			}
+			catch (Exception ex)
+			{
+				return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, ex);
+			}
 		}
 
 		#region Private Methods
@@ -79,10 +150,15 @@ namespace DotNetDev.Service.PCache.Controllers
 
 		//	return result;
 		//}
-		private IEnumerable<T> GetAllObjectsOfTypeFromCache<T>()
+		private static IEnumerable<Person> GetAllFromCache()
 		{
+			var result = new List<Person>();
+
 			ObjectCache cache = MemoryCache.Default;
-			var result = cache.OfType<T>();
+			foreach(var item in cache)
+			{
+				result.Add((Person)item.Value);
+			}
 
 			return result;
 		}
@@ -92,12 +168,11 @@ namespace DotNetDev.Service.PCache.Controllers
 		/// </summary>
 		/// <param name="id">Unique ID</param>
 		/// <returns>Stored object (of any type)</returns>
-		private T GetFromCache<T>(Guid id)
+		private Person GetFromCache(long id)
 		{
-			ObjectCache cache = MemoryCache.Default;
-			var item = (T)cache[id.ToString()];
+			var result = GetAllFromCache().First<Person>(i => i.Id == id);
 
-			return item;
+			return result;
 		}
 
 		/// <summary>
@@ -105,14 +180,48 @@ namespace DotNetDev.Service.PCache.Controllers
 		/// </summary>
 		/// <param name="data">object to store</param>
 		/// <returns>Unique ID</returns>
-		private static Guid SetToCache(object data)
+		private Person SetToCache(Person data)
 		{
-			var newGuid = Guid.NewGuid();
+			ObjectCache cache = MemoryCache.Default;
+			cache.Add(data.Id.ToString(), data, DateTime.Now.AddDays(1));
+
+			return data;
+		}
+
+		/// <summary>
+		/// Update object in cache
+		/// </summary>
+		/// <param name="data">object with updated data</param>
+		/// <returns>Update successful</returns>
+		private bool UpdateCache(Person data)
+		{
+			var result = GetFromCache(data.Id);
+
+			if (result == null)
+				return false;
 
 			ObjectCache cache = MemoryCache.Default;
-			cache.Add(newGuid.ToString(), data, DateTime.Now.AddDays(1));
+			cache.Set(data.Id.ToString(), data, DateTime.Now.AddDays(1));
 
-			return newGuid;
+			return true;
+		}
+
+		/// <summary>
+		/// Remove item from cache
+		/// </summary>
+		/// <param name="id">Id of the item to be removed</param>
+		/// <returns>Removing successful</returns>
+		private bool DeleteFromCache(long id)
+		{
+			var result = GetFromCache(id);
+
+			if (result == null)
+				return false;
+
+			ObjectCache cache = MemoryCache.Default;
+			cache.Remove(id.ToString());
+
+			return true;
 		}
 		#endregion
 	}

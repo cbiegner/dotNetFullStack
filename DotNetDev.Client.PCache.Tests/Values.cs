@@ -9,7 +9,7 @@ namespace DotNetDev.Client.PCache.Tests
 	[TestClass]
 	public class ValuesTests
 	{
-		private const string baseURI = "http://localhost:5000";
+		private const string baseURI = "http://localhost:53600";
 
 		[TestMethod]
 		public void GetAll()

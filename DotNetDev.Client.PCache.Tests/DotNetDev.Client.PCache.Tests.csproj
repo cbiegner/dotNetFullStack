@@ -52,9 +52,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\DotNetDev.Client.PCache\DotNetDev.Client.PCache.csproj">
       <Project>{7f265d79-ac9b-46df-85a9-9fb025d4e16d}</Project>
       <Name>DotNetDev.Client.PCache</Name>
@@ -63,6 +60,9 @@
       <Project>{14b99845-3aaa-4e12-81fc-0bb908df9c98}</Project>
       <Name>DotNetDev.Model.PCache</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
